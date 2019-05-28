@@ -80,7 +80,7 @@
                 </Sider>
                 <div class="layout-content">
                     <div> 
-                         <router-view> </router-view>   
+                         <router-view v-if="isRouterAlive"> </router-view>   
                     </div>
                      <BackTop :height="0" :bottom="30" >
                         <div v-on:mouseenter="show=true" v-on:mouseleave="show=false" v-bind:class="{'back-top-btn-show':show, 'back-top-btn': !show}">
@@ -106,35 +106,8 @@ export default {
             msg: '',
             show: false,
             isLogin: false,
-            taskList: [
-                {
-                    value: 'All',
-                    label: '全部'
-                },
-                {
-                    value: 'Questionaire',
-                    label: '问卷调查'
-                },
-                {
-                    value: 'Express',
-                    label: '取快递'
-                },
-               
-            ],
-
-            rangeList: [
-                {
-                    value: 'All',
-                    label: '全部'
-                },
-                {
-                    value: 'Group1',
-                    label: '小组1'
-                },
-            ],
-            taskClass: '',
-            range: ''
-
+            
+            isRouterAlive:true
 
         };
     },
@@ -154,8 +127,19 @@ export default {
         },
         jumpToLoginPage: function() {
             this.$router.push({path: `/login`})
-        }
+        },
 
+        reload() {
+            this.isRouterAlive = false;
+            this.$nextTick(function() {
+                this.isRouterAlive = true;
+            })
+        }
+    },
+    provide() {
+        return {
+            reload: this.reload
+        }
     }
 }
 </script>

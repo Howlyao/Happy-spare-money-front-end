@@ -7,7 +7,13 @@ import iView from 'iview'
 import 'iview/dist/styles/iview.css'
 import axios from '../node_modules/axios' 
 Vue.config.productionTip = false
+// axios.defaults.withCredentials=true
+
+// axios.defaults.baseURL = 'http://139.196.79.193:3000'
+// axios.defaults.baseURL = 'http://localhost:3000/api/v1'
+axios.defaults.baseURL = 'http://localhost:3000'
 Vue.prototype.$axios = axios;
+
 /* eslint-disable no-new */
 Vue.use(iView)
 new Vue({
