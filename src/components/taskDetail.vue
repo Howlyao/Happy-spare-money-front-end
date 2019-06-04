@@ -3,6 +3,8 @@
         <div class="task-detail-body">
             <div class="drawer-btn">
                 <Button @click="drawerDisplay = true" type="info" v-show="isReleaser">任务完成度</Button>
+                </br>
+                <Button type="primary" style="margin-top: 10px" v-show="isReleaser && task.type == 1" @click="jumpToQuestionnaire(task.questionnaire_path, 0)">问卷内容</Button>
             </div>
             <h1 id="title" style="font-size: 28px">任务信息</h1>
             <div class="detail-body">
@@ -17,7 +19,7 @@
                     </div>
                     <div class="div-taskInfo-item">
                         <h1 id="type">类型</h1>
-                        <p>{{ task.type }} </p>
+                        <p>{{ task.type_label }} </p>
                     </div>
                     <div class="div-taskInfo-item">
                         <h1 id="intro">简介</h1>
@@ -26,7 +28,7 @@
                     <div class="tack-releaser div-taskInfo-item">
                         <h2 id="releaser">发布人</h2>
                         <Avatar :src="avatar"> </Avatar>
-                        <span>{{ task.releaser }} </span>
+                        <span style="margin-left: 10px">{{ name }} </span>
                     </div>
                     <div class="task-time div-taskInfo-item">
                         <h1 id="time">任务时间</h1>
@@ -83,7 +85,7 @@
             </div>
         
        </div>
-        <Drawer title="完成度" width="480" :closable="false" v-model="drawerDisplay">
+        <Drawer title="完成度" width="500" :closable="false" v-model="drawerDisplay">
            <div class="table-whole">
                 <div class="div-table-body">
                     <div class="table-header">
@@ -95,7 +97,7 @@
                                             <span>User</span>
                                         </div>
                                     </th>
-                                    <th  width="163">
+                                    <th  width="203">
                                         <div class="header-th">
                                             <span>State</span>
                                         </div>
@@ -120,13 +122,13 @@
                                             <strong>{{ item.username }}</strong>
                                         </div>
                                     </td>
-                                    <td  width="163">
+                                    <td  :width="td_width">
                                         <div class="header-th">
                                             <span>{{ item.label }}</span>
                                         </div>
                                     </td>
                                     <td width="120">
-                                        <div class="header-th" >
+                                        <div class="header-th" style="display: flex">
                                             <Poptip placement="bottom-end">
                                                  <Button type="primary" size="small" :disabled="item.state != 1">确认完成</Button>
                                                  <div class="div-evaluation" slot="content">
@@ -135,6 +137,7 @@
                                                     <Button type="info" size="small" :disabled="item.state == 2" @click="confirmTaskComplement(item.username, scoreValue, index)">确认</Button>
                                                  </div>
                                             </Poptip>
+                                            <Button type="primary" size="small" style="margin-left:5px" v-show="task.type == 1" :disabled="item.state == 0" @click="jumpToQuestionnaire(item.questionnaire_path, 2)">问卷答案</Button>
                                           
                                         </div>
                                     </td>
@@ -173,7 +176,9 @@ export default {
     inject: ['reload'],
     data () {
         return {
-            username: 'abc',
+            
+            username: 'yao',
+            name:'',
             task_id: '',
             isReleaser: false,     
             isAcceptor: false,      //control the show of accepter and cancel buttons
@@ -184,6 +189,8 @@ export default {
             drawerDisplay: false,
             scoreValue: 0,
             trs: [],
+            tr: null,
+            td_width: 203,
             avatar:'',
             task: {
                 title: 'xxxxxx问卷调查',
@@ -218,11 +225,31 @@ export default {
     
     mounted() {
         this.task_id = this.$route.params.id;    
-        this.getTaskDetail();
+        this.getMyUserInfo();
 
     },
 
     methods: {
+        getMyUserInfo(){
+            let vm = this;
+            let url = '/api/v1/user/getPersonalInfo'
+            this.$axios.get(url, {
+            
+            })
+            .then(function(response) {
+                let data = response.data;
+                if (data.code == 200) {
+                    let userInfo = data.data;
+                    vm.username = userInfo.username;
+                    vm.name = userInfo.name;
+                    vm.getTaskDetail();
+                } 
+            
+            })
+            .catch(function (error) {
+                console.log('Fail to request');
+            });
+        },
         // OK
         getTaskDetail:function() {
             let vm = this;
@@ -236,14 +263,21 @@ export default {
             })
             .then(function(response) {
                 let data = response.data;
-                console.log(data);
+                // console.log(data);
                 if (data.code == 200) {
                     let task = data.data;
                     if (task.type == 1) {
-                        task.type = '问卷调查';
+                        task["type_label"] = '问卷调查';
+                        vm.td_width = 163;
                     } else {
-                        task.type = '跑腿';
+                        task["type_label"] = '跑腿';
+                        vm.td_width = 203;
                     }
+
+                   
+
+                    
+
                     vm.task = task;
                     //Set the charactor
                     vm.setCharactor(); 
@@ -266,13 +300,13 @@ export default {
             //异步
             this.$axios.get(url, {
                 params: {
-                    username: vm.username
+                    username: vm.task.publisher
                 }
             })
             .then(function(response) {
                 let data = response.data;
                 if (data.code == 200) {
-                    console.log(data);
+                    // console.log(data);
                     vm.avatar = data.data.avatar;
                 }
                
@@ -280,7 +314,7 @@ export default {
                 
             })
             .catch(function (error) {
-                console.log('error');
+                console.log('userInfo error');
             });
 
         },
@@ -313,23 +347,24 @@ export default {
                 })
                 .then(function(response) {
                     
-                    let trs = response.data.data;
-                    
-                    if (trs == '') {
+                    let tr = response.data.data;
+                    // console.log(response);
+                    if (tr == null) {
                         vm.isAcceptor = false;
+                      
                     
                     } else {
-                        vm.trs = trs[0];
+                        vm.tr = tr;
                         vm.isAcceptor = true;
                         // console.log('test');
-                        if (vm.trs.state == 1) {
+                        if (vm.tr.state == 1) {
                             vm.acceptorBtnMsg = '等待核实';
                             vm.isDoing = false;
-                        } else if (vm.trs.state == 2) {
+                        } else if (vm.tr.state == 2) {
                             vm.acceptorBtnMsg = '已完成';
                             vm.isDoing = false;
                         }
-                        if (vm.trs.state == 2) {
+                        if (vm.tr.state == 2) {
                             vm.isCompleted = true;
                         }
                         
@@ -338,7 +373,7 @@ export default {
                 
                 })
                 .catch(function (error) {
-                     console.log('error');
+                     console.log('setCharacter error');
                 });
 
             }
@@ -384,10 +419,10 @@ export default {
         },
 
         completeTask: function() {
-            if(this.task.type == '问卷调查') {
-                let url = 'http://localhost:3000/uploads/questionnaire/f08edd9a08d95.json';
-                
-                this.$router.push({name: 'questionnaire', params: {url: url}});
+            if(this.task.type == 1) {
+                // let url = 'http://localhost:3000/uploads/questionnaire/69cc28649066e.json';
+                let url = this.task.questionnaire_path;
+                this.$router.push({name: 'questionnaire', params: {url: url, id: this.task.task_id, state: 1}});
             } else {
                 let vm = this;
                 let url = '/api/v1/task/complement'
@@ -433,7 +468,7 @@ export default {
                     desc:  'Quiting the task successfully.'
                 });
                 vm.reload();
-                // console.log(reponse.data)
+                // console.log(response.data)
                 //reload
             })
             .catch(function (error) {
@@ -493,7 +528,7 @@ export default {
                 
                 if (data.code == 200) {
                     let trs = data.data;
-                    console.log(trs);
+                    // console.log(trs);
                     for(let i = 0;i < trs.length;i ++) {
                         if (trs[i].state == 0) {
                             trs[i]["label"] = '正在做';
@@ -509,14 +544,16 @@ export default {
                     if(trs.length >= vm.task.max_accepter_number) {
                         vm.isOver = true;
                     }
+                 
                     vm.trs = trs;
+                    
                    
                 }
                 
                 
             })
             .catch(function (error) {
-                console.log('error');
+                console.log('get tr error');
             });
         },
 
@@ -570,7 +607,15 @@ export default {
             .catch(function (error) {
                 console.log('error');
             });
+        },
+
+        jumpToQuestionnaire(url, state) {
+            // let url = this.task.questionnaire_path;
+            // let url = 'http://localhost:3000/uploads/questionnaire/69cc28649066e.json';          
+            this.$router.push({name: 'questionnaire', params: {url: url, state: state}});
         }
+
+
     }
 }
     

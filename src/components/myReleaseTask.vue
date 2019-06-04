@@ -76,7 +76,7 @@
 export default {
     data() {
         return {
-            username: 'yao',
+            username: null,
             taskType: [
                 {
                     value: 'all',
@@ -158,13 +158,12 @@ export default {
     mounted() {
         //http.get my release task
         //this.getReleaseTask(this.typeSelect, this.rangeSelect, this.stateSelect);
-        this.getGroup();
-        this.getReleaseTask(this.typeSelect, this.rangeSelect, this.stateSelect);
+        this.getUserInfo()
     },
 
     methods: {
         isComplete(state) {
-            return state == 2;
+            return state == 3;
         },
 
         isWaiting (state) {
@@ -173,6 +172,26 @@ export default {
 
         isEnter(id) {
             return id == this.enterItemId;
+        },
+        getUserInfo(){
+            let vm = this;
+            let url = '/api/v1/user/getPersonalInfo'
+            this.$axios.get(url, {
+            
+            })
+            .then(function(response) {
+                let data = response.data;
+                if (data.code == 200) {
+                    let userInfo = data.data;
+                    vm.username = userInfo.username;
+                    vm.getGroup();
+                    vm.getReleaseTask(vm.typeSelect, vm.rangeSelect, vm.stateSelect);
+                } 
+            
+            })
+            .catch(function (error) {
+                console.log('Fail to request');
+            });
         },
         getGroup() {
             let vm = this;
@@ -237,6 +256,7 @@ export default {
                             let trs = taskItems[i].trs;
                             for (let j = 0;j < trs.length;j ++) {
                                 if (trs[j].state == 1) {
+                                    console.log("test");
                                     taskItems[i].state = 1;
                                     break;
                                 }

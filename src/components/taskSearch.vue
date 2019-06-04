@@ -49,7 +49,7 @@
 export default {
     data() {
         return {
-            username:'yao',
+            username: null,
             taskType: [
                 {
                     value: 'all',
@@ -123,37 +123,33 @@ export default {
     },
 
     mounted() {
-        this.getGroup();
-        this.getTasks(this.typeSelect, this.rangeSelect);
-        // this.login();
+        this.getUserInfo();
+       
+        
     },
 
     methods: {
-        login:function() {
+        getUserInfo(){
             let vm = this;
-            let url = '/api/v1/user/login';
-            //异步
-            this.$axios.post(url, {
-                type : 0,
-                username: 'hyx',
-                password: '123456',
-                headers: {
-                   "Access-Control-Allow-credentials": true, 
-                   "Access-Control-Allow-Origin": "*"
-                }
-               
+            let url = '/api/v1/user/getPersonalInfo'
+            this.$axios.get(url, {
             
             })
             .then(function(response) {
-                console.log(response.headers);
+                let data = response.data;
+                if (data.code == 200) {
+                    let userInfo = data.data;
+                    vm.username = userInfo.username;
+                    vm.getGroup();
+                    vm.getTasks(vm.typeSelect, vm.rangeSelect);
+                } 
             
             })
             .catch(function (error) {
                 console.log('Fail to request');
             });
         },
-        
-        getGroup: function() {
+        getGroup() {
             let vm = this;
             let url = '/api/v1/team/MemberName';
             //异步
@@ -179,7 +175,7 @@ export default {
             });
         },
 
-        getTasks: function(typeSelect, rangeSelect) {
+        getTasks(typeSelect, rangeSelect) {
             let vm = this;
             let url = '/api/v1/task';
             //异步
@@ -196,10 +192,12 @@ export default {
                 let data = response.data;
                 if (data.code == 200) {
                     let tasks = data.data;
+                    console.log(tasks);
                     vm.taskItems = [];
                     for (let i = 0;i < tasks.length;i ++) {
-                         if (tasks[i].trs.length >= tasks[i].max_accepter_number)
+                        if (tasks[i].trs.length >= tasks[i].max_accepter_number)
                             continue;
+                            
                         if (tasks[i].type == 1) {
                             tasks[i].type = '问卷调查';
                         } else if (tasks[i].type == 2){
@@ -217,7 +215,7 @@ export default {
 
         },
 
-        jumpToTaskDetail: function(id) {
+        jumpToTaskDetail(id) {
             this.$router.push({path: `/MainPage/taskDetail/${id}`})
         }
     }

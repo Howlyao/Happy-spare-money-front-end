@@ -19,7 +19,7 @@
           </Col>
           <Col span="13">
             <template v-if="userType=='0'">
-              <Form  :model="userInfo" :rules="ruleValidate" label-position="right" :label-width="80">
+              <Form ref="infoForm" :model="userInfo" :rules="userRuleValidate" label-position="right" :label-width="80">
                 <FormItem label="用户名" prop="username">
                   <Input v-model="userInfo.username" placeholder="username"></Input>
                 </FormItem>
@@ -29,7 +29,7 @@
                 <FormItem label="确认密码" prop="confirmPassword">
                   <Input v-model="userInfo.confirmPassword" placeholder="confirm password"></Input>
                 </FormItem>
-                <FormItem label="性名" prop="name">
+                <FormItem label="姓名" prop="name">
                   <Input v-model="userInfo.name" placeholder="real name"></Input>
                 </FormItem>
                 <FormItem label="学校" prop="school">
@@ -44,11 +44,11 @@
                   </Select>
                 </FormItem>
                 <FormItem label="认证照片" prop="authImg">
-                  <input id="fileInput" type="file" @change="handleUpload">
+                  <img :src="userInfo.authImg" id="authImg">
+                  <input id="fileInput" type="file" @change="authImgUpload">
                   <label class="img-upload-box" for="fileInput">
                     <Icon type="ios-camera" size="20"></Icon>
                   </label>
-                  <img src="" id="authImg">
                 </FormItem>
                 <FormItem label="电话" prop="phone">
                   <Input v-model="userInfo.phone" placeholder="phone"></Input>
@@ -59,12 +59,9 @@
                 <FormItem label="qq" prop="qq">
                   <Input v-model="userInfo.qq" placeholder="qq"></Input>
                 </FormItem>
-<!--                <FormItem label="个性签名" prop="hsign">-->
-<!--                  <Input v-model="userInfo.hsign" type="textarea" :autosize="{minRows: 2,maxRows: 5}" placeholder="Enter something..."></Input>-->
-<!--                </FormItem>-->
                 <FormItem>
-                  <Button type="primary">Submit</Button>
-                  <Button style="margin-left: 8px">Reset</Button>
+                  <Button @click="userRegisterSubmit('infoForm')" type="primary">Submit</Button>
+                  <Button @click="handleReset('infoForm')" style="margin-left: 8px">Reset</Button>
                 </FormItem>
               </Form>
 
@@ -87,10 +84,21 @@
 
 </template>
 <script>
+  var SHA256 = require("crypto-js/sha256");
   export default {
     data() {
+      const validateUserPassConf = (rule, value, callback) => {
+        if (value === '') {
+          callback(new Error('请再次输入您的密码'));
+        } else if (value !== this.userInfo.password) {
+          callback(new Error('两次密码不一致'));
+        } else {
+          callback();
+        }
+      };
+
       return {
-        ruleValidate: {
+        userRuleValidate: {
           username: [
             {required: true, message: '用户名不能为空',  trigger: 'blur'}
           ],
@@ -98,10 +106,10 @@
             {required: true, message: '密码不能为空',  trigger: 'blur'}
           ],
           confirmPassword: [
-            {required: true, message: '确认密码不能为空',  trigger: 'blur'}
+            {required: true, validator: validateUserPassConf,  trigger: 'blur'}
           ],
           name: [
-            {required: true, message: '性名不能为空',  trigger: 'blur'}
+            {required: true, message: '姓名不能为空',  trigger: 'blur'}
           ],
           school: [
             {required: true, message: '学校不能为空',  trigger: 'blur'}
@@ -110,10 +118,12 @@
             {required: true, message: '年级不能为空',  trigger: 'blur'}
           ],
           authImg: [
-            {required: true}
-          ],
+            {required: true, message: '请上传您与学生证的合照作为认证照片'}
+          ]
         },
+
         userType: '0',
+
         userInfo: {
           username: '',
           password: '',
@@ -123,9 +133,10 @@
           grade: '1',
           phone: '',
           weChat: '',
-          qq: ''
-          // hsign: ''
+          qq: '',
+          authImg: ''
         },
+
         orgInfo: {
 
         }
@@ -133,31 +144,99 @@
 
       };
     },
+
     methods: {
-      loginSubmit() {
-        this.$Message.success('Success!');
-        this.$Message.error('Fail!');
-      },
-
-      handleUpload(event) {
-        var imgObject = event.target.files[0];
-        if (!imgObject) return;
-        var showPicURL = this.getObjectURL(imgObject);
-        var show = document.getElementById('authImg');
-        show.src = showPicURL
-      },
-
-      getObjectURL(file) {
-        var url = null
-        if (window.createObjectURL) {
-          url = window.createObjectURL(file);
-        } else if (window.URL) {
-          url = window.URL.createObjectURL(file);
-        } else if (window.webkitURL) {
-          url = window.webkitURL.createObjectURL(file);
+      dataURLtoBlob(dataurl) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+          bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--){
+          u8arr[n] = bstr.charCodeAt(n);
         }
-        return url;
-      }
+        return new Blob([u8arr], {type:mime});
+      },
+
+      fileToDataURL(file, callback) {
+        var reader = new FileReader();
+        reader.onload = function(e) {callback(e.target.result);};
+        reader.readAsDataURL(file);
+      },
+
+      authImgUpload(event) {
+        var imgFile = event.target.files[0];
+        if (!imgFile) {
+          this.userInfo.authImg = '';
+          return;
+        }
+
+        this.fileToDataURL(imgFile, (url) => {
+          this.userInfo.authImg = url;
+        });
+        // var showPicURL = this.getObjectURL(imgObject);
+        // var show = document.getElementById('authImg');
+        // this.userInfo.authImg = showPicURL;
+      },
+
+      // getObjectURL(file) {
+      //   var url = null
+      //   if (window.createObjectURL) {
+      //     url = window.createObjectURL(file);
+      //   } else if (window.URL) {
+      //     url = window.URL.createObjectURL(file);
+      //   } else if (window.webkitURL) {
+      //     url = window.webkitURL.createObjectURL(file);
+      //   }
+      //   return url;
+      // }
+
+      userRegisterSubmit (name) {
+        this.$refs[name].validate((valid) => {
+          if (valid) {
+            let formData = new FormData();
+            formData.append("type", "0");
+            for(var key in this.userInfo) {
+              if (key == 'confirmPassword') continue;
+              if (key == 'authImg') {
+                if (this.userInfo.authImg) {
+                  let blob = this.dataURLtoBlob(this.userInfo.authImg);
+                  formData.append("authImg", blob);
+                }
+              }
+              else if (key == 'password') {
+                formData.append("password", SHA256(this.userInfo.password).toString());
+              }
+              else {
+                formData.append(key, this.userInfo[key]);
+              }
+            }
+
+            this.$axios({
+              method: 'post',
+              url: '/api/v1/user/create',
+              data: formData,
+              config: {headers: {'Content-Type': 'multipart/form-data'}}
+            })
+            .then(msg => {
+              if (msg.data.code == 200) {
+                this.$Message.success('Success!');
+                this.$router.push({name: 'login'});
+              }
+              else {
+                this.$Message.error(msg.data.msg);
+              }
+            })
+            .catch(err => {
+              this.$Message.error(err.response.statusText);
+            });
+          }
+          else {
+            this.$Message.error('Fail!');
+          }
+        })
+      },
+
+      handleReset (name) {
+        this.$refs[name].resetFields();
+      },
     }
 
 
@@ -169,6 +248,7 @@
   .layout {
     min-height: 100%;
     background: #f5f7f9;
+    text-align: center;
   }
 
   .layout-header {
@@ -220,5 +300,4 @@
     vertical-align: middle;
     border-radius: 2%;
   }
-
 </style>

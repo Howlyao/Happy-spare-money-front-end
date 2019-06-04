@@ -185,8 +185,10 @@
 
                             style="margin-top:20px">
                             <div style="padding: 20px 0">
-                                <Icon type="ios-cloud-upload" size="52" style="color: #3399ff;"></Icon>
-                                <p>Click or drag files here to upload</p>
+                                <Icon type="ios-cloud-upload" size="52" style="color: #3399ff;" v-show="!isFileExist"></Icon>
+                                <Icon type="ios-cloud-done-outline" size="52" style="color: #3399ff;" v-show="isFileExist"></Icon>
+                                <p v-show="!isFileExist">Click or drag files here to upload</p>
+                                <p v-show="isFileExist">File is ready to be uploaded</p>
                             </div>
                         </Upload>   
                      </div>
@@ -254,6 +256,7 @@ export default {
             isUploading: false,
             //isQuestionaire type
             isQuestionaire: true,
+            isFileExist: false,
             //selector item
             taskType: [
                 {
@@ -349,11 +352,30 @@ export default {
                 if (new RegExp("(" + k + ")").test(fmt)) fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
                 return fmt;
         };
-
-        this.getRecentTask();
-        this.getGroup();
+        this.getUserInfo();
+        
     },
     methods: {
+        getUserInfo(){
+            let vm = this;
+            let url = '/api/v1/user/getPersonalInfo'
+            this.$axios.get(url, {
+            
+            })
+            .then(function(response) {
+                let data = response.data;
+                if (data.code == 200) {
+                    let userInfo = data.data;
+                    vm.username = userInfo.username;
+                    vm.getRecentTask();
+                    vm.getGroup();
+                } 
+            
+            })
+            .catch(function (error) {
+                console.log('Fail to request');
+            });
+        },
         getRecentTask() {
             //http request get
             let vm = this;
@@ -440,6 +462,7 @@ export default {
             console.log(file);
             if (type == 'yaml') {
                 this.taskInfo.file = file;
+                this.isFileExist = true;
             } else {
                 this.$Notice.warning({
                     title: 'The file format is incorrect',
@@ -601,7 +624,7 @@ export default {
             
             })
             .catch(function (error) {
-                this.$Notice.warning({
+                vm.$Notice.warning({
                     title: 'Task Release Error',
                     desc: 'Fail to Release the Task '
                 });

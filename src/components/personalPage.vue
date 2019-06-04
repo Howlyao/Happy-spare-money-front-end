@@ -4,80 +4,84 @@
             <div class="div-header">
                 <Header class="layout-header" >
                     <div class="layout-header-right">
-                        <Avatar class="avatar" icon="ios-person"  />
-                        <a href="javascript:void(0)" v-show="!isLogin" v-on:click="isLogin = !isLogin" >
-                            <span class="uniform-fontsize" style="margin: 7px; color:#2d8cf0;position: relative;top: 2px">登陆</span>
-                        </a>
-                        <Dropdown v-show="isLogin">
-                            <a href="javascript:void(0)" style="margin: 7px;">
-                                <Icon type="ios-arrow-down" size="24" style="color:#2d8cf0" v-on:click="isLogin = !isLogin"/>
-                            </a>
+                        <div class="avatar">
+                          <img class="avatarImg" :src="userInfo.avatar">
+                        </div>
+                        <Dropdown>
+                            <Icon type="ios-arrow-down" size="24" style="margin: 7px; color:#2d8cf0"/>
                             <DropdownMenu slot="list">
-                                <DropdownItem><div @click="jumpToPersonalPage()">{{ msg }}</div></DropdownItem>
-                                <DropdownItem><div @click="jumpToMainPage()">主页</div></DropdownItem>
-                                <DropdownItem><div @click="jumpToLoginPage()">注销</div></DropdownItem>
+                                <DropdownItem><div @click="jumpToPersonalPage()">{{userInfo.username}}</div></DropdownItem>
+                                <DropdownItem><div @click="jumpToMainPage()">主站</div></DropdownItem>
+                                <DropdownItem><div @click="jumpToLoginPage()">退出</div></DropdownItem>
                             </DropdownMenu>
                         </Dropdown>
                     </div>
                 </Header>
             </div>
-            <Layout class="layout-bottom">
-                <Sider class="layout-sider">
-                    <Menu active-name="1-1" theme="dark" width="auto" >
-                        <MenuItem name="1-1">
-                            <span>个人信息</span>
-                        </MenuItem>
-                        <MenuItem name="1-2">
-                            <span>充值</span>
-                        </MenuItem>
-                        <MenuItem name="1-3">
-                            <span>提现</span>
-                        </MenuItem>
-                    </Menu>
-                </Sider>
-                    <div class="content">
-                    <router-view></router-view>
-                </div>
+                <Layout class="layout-bottom">
+                    <Sider class="layout-sider">
+                        <Menu active-name="1-1" theme="dark" width="auto" >
+                          <router-link to="/personalPage/personalInfo">
+                            <MenuItem name="1-1">个人信息</MenuItem>
+                          </router-link>
+                          <router-link to="/personalPage/deposit">
+                            <MenuItem name="1-2">充值</MenuItem>
+                          </router-link>
+                          <router-link to="/personalPage/withdraw">
+                            <MenuItem name="1-3">提现</MenuItem>
+                          </router-link>
+                        </Menu>
+                    </Sider>
+                        <div class="content">
+                          <router-view></router-view>
+                        </div>
+                </Layout>
             </Layout>
-        </Layout>  
     </div>
 </template>
-
+    
 <script>
 export default {
-    data() {
+    data() {	
         return {
-            user: {
-                name: 'Name',
-                acount_state : 0
-            },
-            isUser: True,
-            msg: ''
-        }
-
-    },
-    
+          userInfo: {
+            username: 'hjj',
+            avatar: 'https://i.loli.net/2017/08/21/599a521472424.jpg',
+          },
+        }	
+        
+     },	
+    	
     mounted() {
-        this.isUser = (this.user.acount_state == 0)
-        this.msg = this.isUser ? '个人信息': '机构信息'
-    },
-    methods: {
-        jumpToPersonalPage: function () {
-            if (this.isUser)
-                this.$router.push({path: `/personalPage/userInf`})
-            else 
-                this.$router.push({path: `/personalPage/organizationInf`})
-        },
-        jumpToMainPage: function() {
-            this.$router.push({path: `/MainPage/taskSearch`})
-        },
-        jumpToLoginPage: function() {
-            this.$router.push({path: `/login`})
+      this.$axios.get('api/v1/user/getPersonalInfo')
+      .then(msg => {
+        console.log(msg.data.code);
+        if (msg.data.code == 200) {
+          this.userInfo = msg.data.data;
         }
+      })
+      .catch(err => {
+        console.log(err);
+        if (err.response.status == 401) {
+          this.$router.push({name: 'login'});
+        }
+      });
+    },
 
-    }
-
-
+    methods: {
+        jumpToMainPage: function() {	
+            this.$router.push({path: `/MainPage`});
+        },	
+        jumpToLoginPage: function() {	
+            this.$router.push({path: `/login`});
+        },
+        jumpToPersonalPage: function () {
+          this.$router.push({path: `/personalPage/personalInfo`});
+        }
+        
+     }
+     
+     
 }
 </script>
 
@@ -92,8 +96,22 @@ div {
     padding: 0px;
 }
 
-.div-header {
-    border-bottom: 1px solid #000000;
+.div-header {	
+    border-bottom: 1px solid #000000;	
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: hidden;
+  border-radius: 50%;
+  line-height: 32px;
+}
+
+.avatarImg {
+  width: 32px;
 }
 
 .layout-header{
@@ -103,9 +121,7 @@ div {
     z-index: 1000;
     vertical-align: middle;
     background: #363e4f;
-   
     height:70px;
-    
 }
 
 .layout-header-right {
@@ -138,7 +154,6 @@ div {
     position:absolute;
     left:200px;
     right:0px;
-
 }
 
 </style>
