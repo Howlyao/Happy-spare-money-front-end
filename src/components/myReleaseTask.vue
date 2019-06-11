@@ -72,7 +72,7 @@
     </div>
 </template>
 
-<script>
+<script scoped>
 export default {
     data() {
         return {
@@ -190,7 +190,13 @@ export default {
             
             })
             .catch(function (error) {
-                console.log('Fail to request');
+                if (error.response.status == 401) {
+                    vm.$Notice.warning({
+                        title: 'Login',
+                        desc:  "Please Login first"
+                    });
+                    vm.$router.push({name: 'login'});
+                }
             });
         },
         getGroup() {
@@ -242,7 +248,7 @@ export default {
             .then(function(response) {
                 
                 let data = response.data;
-                console.log(data);
+                // console.log(data);
                 if (data.code == 200) {
                     let taskItems = data.data;
                     for (let i = 0;i < taskItems.length;i ++) {
@@ -256,7 +262,6 @@ export default {
                             let trs = taskItems[i].trs;
                             for (let j = 0;j < trs.length;j ++) {
                                 if (trs[j].state == 1) {
-                                    console.log("test");
                                     taskItems[i].state = 1;
                                     break;
                                 }

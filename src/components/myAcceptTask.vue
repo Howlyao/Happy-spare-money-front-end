@@ -70,7 +70,7 @@
     </div>
 </template>
 
-<script>
+<script scoped>
 export default {
     data() {
         return {
@@ -208,7 +208,13 @@ export default {
             
             })
             .catch(function (error) {
-                console.log('Fail to request');
+                if (error.response.status == 401) {
+                    vm.$Notice.warning({
+                        title: 'Login',
+                        desc:  "Please Login first"
+                    });
+                    vm.$router.push({name: 'login'});
+                }
             });
         },
         getGroup() {

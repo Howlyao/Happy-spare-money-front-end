@@ -199,9 +199,18 @@
                 </div>
                
                 <Button type="primary" long  @click="releaseTask(taskInfo)" style="font-size: 14px" :disabled="isUploading">发布任务</Button>
+                <Modal
+                    v-model="isModalShow"
+                    title="支付"
+                    @on-ok="ok"
+                    @on-cancel="cancel"
+                    :loading="loading">
+                    <p style="font-size: 14px; margin-bottom: 5px;">请输入密码</p>
+                    <Input v-model="password" type="password"></Input>
+                </Modal>
             </div>
             <!--Rencent task list-->
-            <div class="div-recent-task">
+            <div class="div-recent-task">   
                 <p style="margin:10px;font-size: 18px;font-weight: bold;">最近发布的任务</p>
                 <div class="task-content">
                     <div class="task-item" v-for="item in taskItems" v-bind:class="{
@@ -230,7 +239,7 @@
                 </div>
             </div>
             </div>
-
+            <!--
             <div>
                 <p>{{taskInfo.title}}</p>
                 <p>{{taskInfo.introduction}}</p>    
@@ -243,20 +252,26 @@
                 <p>{{taskInfo.score}}</p>  
                 <p>{{taskInfo.content}}</p>      
             </div>
+            -->
         </div>
     </div>
 </template>
 
-<script>
+<script scoped>
+var SHA256 = require("crypto-js/sha256");
 export default {
     data() {
         return {
             username: 'yao',
+            password: '',
+            money: 0,
             isFirst: true,
             isUploading: false,
+            loading: true,
             //isQuestionaire type
             isQuestionaire: true,
             isFileExist: false,
+            isModalShow: false,
             //selector item
             taskType: [
                 {
@@ -367,13 +382,20 @@ export default {
                 if (data.code == 200) {
                     let userInfo = data.data;
                     vm.username = userInfo.username;
+                    vm.money = userInfo.money;
                     vm.getRecentTask();
                     vm.getGroup();
                 } 
             
             })
             .catch(function (error) {
-                console.log('Fail to request');
+                if (error.response.status == 401) {
+                    vm.$Notice.warning({
+                        title: 'Login',
+                        desc:  "Please Login first"
+                    });
+                    vm.$router.push({name: 'login'});
+                }
             });
         },
         getRecentTask() {
@@ -444,7 +466,7 @@ export default {
         },
         getFile(event) {
             this.file = event.target.files[0];
-            console.log(this.file.name);
+            // console.log(this.file.name);
         },
         isEnter(id) {
             return id == this.enterItemId;
@@ -483,7 +505,61 @@ export default {
         jumpToTaskDetail(id) {
             this.$router.push({path: `/MainPage/taskDetail/${id}`})
         },
+        ok() {
 
+            this.confirmPassword(this.password);
+          
+        },
+        cancel() {
+            // this.$Message.info('Clicked cancel');
+        },
+        confirmPassword(password) {
+            
+            
+            let vm = this;
+            let url ='/api/v1/user/verifyPassword';
+            
+            this.$axios.post(url, {         
+                password: SHA256(vm.password).toString()
+            })
+            .then(function(response) {
+               
+                let data = response.data;
+                // console.log(data);
+                if (data.code == 200) {
+                    vm.isUploading = true;
+                    vm.isModalShow = false;
+                    if (vm.taskInfo.type == 1) {
+                        vm.postQuestionnaire(vm.taskInfo);
+                    } else {
+                        vm.postTaskInfo(vm.taskInfo, '');
+                    }
+                } else {
+                    vm.$Message.info('密码错误');
+                    vm.loading = false;
+                    setTimeout(() => {
+                        vm.loading = true;
+                    }, 10);    
+                }
+
+                
+            
+            })
+            .catch(function (error) {
+                if (error.response.status == 401) {
+                   
+                    vm.$Notice.warning({
+                        title: 'Task Release',
+                        desc:  "Please Login first"
+                    });
+                    vm.$router.push({name: 'login'});
+               
+                }
+            });
+            
+
+            
+        },
         releaseTask(taskInfo) {
             let isError = false;
             this.isFirst = false;
@@ -534,16 +610,19 @@ export default {
                 isError = true;
             }
 
+            if (this.money < taskInfo.max_accepter_number * taskInfo.money) {
+                this.$Notice.warning({
+                    title: 'Money',
+                    desc: 'Balance is not enough'
+                });
+                isError = true;
+            }
+
           
             if (!isError)
             {
-                this.isUploading = true;
-                if (taskInfo.type == 1) {
-                    this.postQuestionnaire(taskInfo);
-                } else {
-                    this.postTaskInfo(taskInfo, '');
-                }
-               
+                this.isModalShow = true;
+                        
                 
             }
            
@@ -581,7 +660,7 @@ export default {
             })
             
         },
-        postTaskInfo(taskInfo,ques_url) {
+        postTaskInfo(taskInfo, ques_url) {
             let endtime = new Date(taskInfo.endtime).Format("yyyy-MM-dd hh:mm:ss");
             let starttime = new Date().Format("yyyy-MM-dd hh:mm:ss");
             taskInfo.endtime = endtime;
@@ -610,7 +689,7 @@ export default {
 
             })
             .then(function(response) {
-                console.log(response.data);
+                // console.log(response.data);
                 let data = response.data;
                 if (data.code == 200) {
                         vm.$Notice.success({
@@ -624,10 +703,15 @@ export default {
             
             })
             .catch(function (error) {
-                vm.$Notice.warning({
-                    title: 'Task Release Error',
-                    desc: 'Fail to Release the Task '
-                });
+                if (error.response.status == 401) {
+                   
+                    vm.$Notice.warning({
+                        title: 'Task Quiting',
+                        desc:  "Please Login first"
+                    });
+                    vm.$router.push({name: 'login'});
+               
+                }
             });
         }
 

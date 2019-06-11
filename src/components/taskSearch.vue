@@ -45,7 +45,7 @@
     </div>
 </template>
 
-<script>
+<script scoped>
 export default {
     data() {
         return {
@@ -146,7 +146,13 @@ export default {
             
             })
             .catch(function (error) {
-                console.log('Fail to request');
+                if (error.response.status == 401) {
+                    vm.$Notice.warning({
+                        title: 'Login',
+                        desc:  "Please Login first"
+                    });
+                    vm.$router.push({name: 'login'});
+                }
             });
         },
         getGroup() {
@@ -192,7 +198,7 @@ export default {
                 let data = response.data;
                 if (data.code == 200) {
                     let tasks = data.data;
-                    console.log(tasks);
+                    // console.log(tasks);
                     vm.taskItems = [];
                     for (let i = 0;i < tasks.length;i ++) {
                         if (tasks[i].trs.length >= tasks[i].max_accepter_number)

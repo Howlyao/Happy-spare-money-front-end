@@ -84,7 +84,8 @@ span {
    
 </template>
 
-<script >
+<script scoped>
+
 export default {
     data() {
         return {
@@ -164,10 +165,35 @@ export default {
         this.state = this.$route.params.state;   
         this.task_id = this.$route.params.id;
         this.getQuestionnaire(this.questionnaire_path);
-
+        this.getUserInfo();
         
     },
     methods: {
+        getUserInfo(){
+            let vm = this;
+            let url = '/api/v1/user/getPersonalInfo'
+            this.$axios.get(url, {
+            
+            })
+            .then(function(response) {
+                let data = response.data;
+                if (data.code == 200) {
+                    let userInfo = data.data;
+                    vm.username = userInfo.username;
+                    
+                } 
+            
+            })
+            .catch(function (error) {
+                if (error.response.status == 401) {
+                    vm.$Notice.warning({
+                        title: 'Login',
+                        desc:  "Please Login first"
+                    });
+                    vm.$router.push({name: 'login'});
+                }
+            });
+        },
         getQuestionnaire(questionnaire_path) {
             let vm = this;
             let name = questionnaire_path.substring(questionnaire_path.lastIndexOf('/')+1);
